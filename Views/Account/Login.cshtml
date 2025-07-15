@@ -1,0 +1,24 @@
+﻿@{
+    ViewData["Title"] = "Admin Girişi";
+}
+
+<h2>Admin Girişi</h2>
+
+<form method="post" asp-controller="Account" asp-action="Login">
+    <div style="margin-bottom:10px;">
+        <label for="username">Kullanıcı Adı (İsim Soyisim):</label><br />
+        <input type="text" id="username" name="username" placeholder="Ahmet Yılmaz" required style="width:250px; padding:5px;" />
+    </div>
+    <div style="margin-bottom:10px;">
+        <label for="password">Şifre:</label><br />
+        <input type="password" id="password" name="password" required style="width:250px; padding:5px;" />
+    </div>
+    <button type="submit" style="padding:8px 15px;">Giriş Yap</button>
+</form>
+
+@if (!string.IsNullOrEmpty(ViewBag.LoginError))
+{
+    <div style="color:red; margin-top:15px;">
+        <p>@ViewBag.LoginError</p>
+    </div>
+}

@@ -1,0 +1,16 @@
+﻿@model SmartDoors.Models.User
+
+@{
+    ViewData["Title"] = "Kullanıcı Sil";
+}
+
+<h2>Kullanıcı Sil</h2>
+
+<h4>@Model.FirstName @Model.LastName</h4>
+<p>Bu kullanıcıyı silmek istediğinize emin misiniz?</p>
+
+<form asp-action="DeleteConfirmed" method="post">
+    <input type="hidden" asp-for="UserID" />
+    <button type="submit" class="btn btn-danger">Sil</button>
+    <a asp-action="Index" class="btn btn-secondary">İptal</a>
+</form>

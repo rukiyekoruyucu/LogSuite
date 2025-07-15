@@ -1,0 +1,26 @@
+﻿@model SmartDoors.Models.User
+
+<h2>Yeni Kullanıcı Ekle</h2>
+
+<form asp-action="Create" method="post">
+    <div>
+        <label>Ad</label>
+        <input asp-for="FirstName" required />
+    </div>
+    <div>
+        <label>Soyad</label>
+        <input asp-for="LastName" required />
+    </div>
+    <div>
+        <label>Kart ID</label>
+        <input asp-for="CardID" required />
+    </div>
+    <div>
+        <label>Kapı Yetkisi</label>
+        <select asp-for="DoorAccess">
+            <option value="true">Evet</option>
+            <option value="false">Hayır</option>
+        </select>
+    </div>
+    <button type="submit">Kaydet</button>
+</form>
