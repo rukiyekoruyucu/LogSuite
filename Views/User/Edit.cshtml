@@ -1,27 +1,80 @@
-﻿@model SmartDoors.Models.User
+﻿@model SmartDoors.ViewModels.UserFormViewModel
 
-<h2>Kullanıcı Düzenle</h2>
+@{
+    ViewData["Title"] = "Kullanıcıyı Düzenle";
+}
 
-<form asp-action="Edit" method="post">
-    <input type="hidden" asp-for="UserID" />
-    <div>
-        <label>Ad</label>
-        <input asp-for="FirstName" required />
-    </div>
-    <div>
-        <label>Soyad</label>
-        <input asp-for="LastName" required />
-    </div>
-    <div>
-        <label>Kart ID</label>
-        <input asp-for="CardID" required />
-    </div>
-    <div>
-        <label>Kapı Yetkisi</label>
-        <select asp-for="DoorAccess">
-            <option value="true" selected="@Model.DoorAccess">Evet</option>
-            <option value="false" selected="@(Model.DoorAccess == false)">Hayır</option>
-        </select>
-    </div>
-    <button type="submit">Güncelle</button>
-</form>
+<div class="container mt-5">
+    <h2 class="text-warning mb-4">Kullanıcıyı Düzenle</h2>
+
+    <form asp-action="Edit" method="post">
+        <input type="hidden" asp-for="UserID" />
+
+        <div class="row">
+            <!-- Sol sütun: Ad, Soyad, Kart ID -->
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Ad</label>
+                    <input asp-for="FirstName" class="form-control" required />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Soyad</label>
+                    <input asp-for="LastName" class="form-control" required />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Kart ID</label>
+                    <input asp-for="CardID" class="form-control" required />
+                </div>
+            </div>
+
+            <!-- Sağ sütun: Kapı Erişimleri -->
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Kapı Erişimleri</label>
+                    <div class="form-check mb-2">
+                        <input type="checkbox" id="noDoorsCheckbox" class="form-check-input" />
+                        <label for="noDoorsCheckbox" class="form-check-label">Hiçbir kapı yetkisi yok</label>
+                    </div>
+                    <select asp-for="SelectedDoorIds" asp-items="Model.AllDoors" class="form-select" multiple size="8"></select>
+                    <small class="text-muted">CTRL (veya CMD) tuşu ile çoklu seçim yapabilirsiniz.</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Butonlar -->
+        <div class="mt-3">
+            <button type="submit" class="btn btn-warning">Güncelle</button>
+            <a asp-action="Index" class="btn btn-secondary ms-2">İptal</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        const checkbox = document.getElementById('noDoorsCheckbox');
+        const select = document.querySelector('select[multiple]');
+
+        checkbox.addEventListener('change', function () {
+            if (this.checked) {
+                // Checkbox işaretlenirse seçili kapıları kaldır ve select'i devre dışı bırak
+                for (let i = 0; i < select.options.length; i++) {
+                    select.options[i].selected = false;
+                }
+                select.disabled = true;
+            } else {
+                select.disabled = false;
+            }
+        });
+
+        // Sayfa yüklendiğinde seçili kapı yoksa checkbox'ı otomatik işaretle ve select'i devre dışı bırak
+        window.addEventListener('load', () => {
+            const anySelected = Array.from(select.options).some(opt => opt.selected);
+            if (!anySelected) {
+                checkbox.checked = true;
+                select.disabled = true;
+            }
+        });
+    </script>
+}

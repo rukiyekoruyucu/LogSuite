@@ -1,16 +1,17 @@
 ﻿@model SmartDoors.Models.User
-
 @{
     ViewData["Title"] = "Kullanıcı Sil";
 }
 
-<h2>Kullanıcı Sil</h2>
+<div class="container mt-5">
+    <div class="alert alert-warning text-center">
+        <h4 class="mb-3">Kullanıcıyı Sil</h4>
+        <p><strong>@Model.FirstName @Model.LastName</strong> adlı kullanıcıyı silmek istediğinize emin misiniz?</p>
 
-<h4>@Model.FirstName @Model.LastName</h4>
-<p>Bu kullanıcıyı silmek istediğinize emin misiniz?</p>
-
-<form asp-action="DeleteConfirmed" method="post">
-    <input type="hidden" asp-for="UserID" />
-    <button type="submit" class="btn btn-danger">Sil</button>
-    <a asp-action="Index" class="btn btn-secondary">İptal</a>
-</form>
+        <form asp-action="DeleteConfirmed" asp-route-id="@Model.UserID" method="post">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-danger">Sil</button>
+            <a asp-action="Index" class="btn btn-secondary">İptal</a>
+        </form>
+    </div>
+</div>

@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace SmartDoors.Models
 {
@@ -18,8 +19,12 @@ namespace SmartDoors.Models
         [Required(ErrorMessage = "Kart ID zorunludur.")]
         [StringLength(100, ErrorMessage = "Kart ID en fazla 100 karakter olabilir.")]
         public string CardID { get; set; } = null!;
+        public bool IsActive { get; set; } = true;
 
-        [Display(Name = "Kapı Erişimi")]
-        public bool DoorAccess { get; set; } = true;
+        public ICollection<UserDoor> UserDoors { get; set; } = new List<UserDoor>();
+
+        // ✅ Giriş-çıkış log ilişkisi için gerekli
+        public ICollection<Log> Logs { get; set; } = new List<Log>();
     }
 }
+

@@ -1,57 +1,108 @@
-﻿@model IEnumerable<SmartDoors.Models.Log>
+﻿@model IEnumerable<SmartDoors.ViewModels.LogViewModel>
+@using Microsoft.AspNetCore.Mvc.Rendering
 
 @{
     ViewData["Title"] = "Giriş-Çıkış Kayıtları";
+
+    var doors = ViewBag.Doors as List<SmartDoors.Models.Door> ?? new List<SmartDoors.Models.Door>();
+    string selectedDoorId = ViewBag.SelectedDoorId as string ?? "";
+    string searchString = ViewBag.SearchString as string ?? "";
+    string sortOrder = ViewBag.SortOrder as string ?? "date_desc";
+    string startDate = ViewBag.StartDate as string ?? "";
+    string endDate = ViewBag.EndDate as string ?? "";
+    string errorStatus = ViewBag.ErrorStatus as string ?? "";
+
+    var doorSelectList = new SelectList(doors, "DoorID", "DoorName", selectedDoorId);
+    var sortOrderList = new List<SelectListItem>
+    {
+        new SelectListItem { Value = "date_desc", Text = "Tarihe Göre (Yeni - Eski)" },
+        new SelectListItem { Value = "date_asc", Text = "Tarihe Göre (Eski - Yeni)" }
+    };
+    var errorStatusList = new List<SelectListItem>
+    {
+        new SelectListItem { Value = "", Text = "Tümü" },
+        new SelectListItem { Value = "false", Text = "Hatasız" },
+        new SelectListItem { Value = "true", Text = "Hatalı" }
+    };
 }
-<p>
-    <a asp-controller="User" asp-action="Index">Kullanıcı Yönetimi</a>
-</p>
 
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-primary mb-0">Giriş-Çıkış Kayıtları</h2>
+        <div>
+            <a class="btn btn-outline-secondary me-2" asp-controller="Log" asp-action="Add">Kayıt Ekle</a>
+            <a class="btn btn-outline-secondary" asp-controller="User" asp-action="Index">Kullanıcı Yönetimi</a>
+            <a class="btn btn-outline-secondary" asp-controller="Door" asp-action="Index">Kapı Yönetimi</a>
+        </div>
+    </div>
 
-<h2>Giriş-Çıkış Kayıtları</h2>
+    <form method="get" class="row g-3 mb-4">
+        <div class="col-md-4">
+            <input type="text" name="searchString" class="form-control" placeholder="İsim veya Soyisim Ara" value="@searchString" />
+        </div>
 
-<form method="get">
-    <input type="text" name="searchString" placeholder="İsim veya Soyisim Ara" value="@ViewBag.SearchString" />
-    <select name="sortOrder">
-        <option value="">Tarihe Göre (Yeni - Eski)</option>
-        <option value="date_asc" selected="@(ViewBag.SortOrder == "date_asc" ? "selected" : null)">Tarihe Göre (Eski - Yeni)</option>
-        <option value="error" selected="@(ViewBag.SortOrder == "error" ? "selected" : null)">Hatalı İşlemler</option>
-    </select>
-    <button type="submit">Filtrele</button>
-</form>
+        <div class="col-md-4">
+            @Html.DropDownList("doorId", new SelectList(doors, "DoorID", "DoorName", selectedDoorId), "Tüm Kapılar", new { @class = "form-select" })
+        </div>
 
-<table border="1" cellpadding="5">
-    <thead>
-        <tr>
-            <th>Kullanıcı</th>
-            <th>İşlem</th>
-            <th>Tarih</th>
-            <th>Hata Durumu</th>
-            <th>Yetki</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var log in Model)
-        {
-            <tr>
-                <td>@(log.User?.FirstName ?? "Bilinmiyor") @(log.User?.LastName ?? "")</td>
-                <td>@log.Operation</td>
-                <td>@log.Timestamp.ToString("g")</td>
-                <td>@(log.ErrorStatus ? "Hatalı" : "Başarılı")</td>
-                <td>
-                    @if (log.User != null)
-                    {
-                        <form asp-action="UpdateUserAccess" method="post" style="display:inline;">
-                            <input type="hidden" name="userId" value="@log.User.UserID" />
-                            <select name="doorAccess" onchange="this.form.submit()">
-                                <option value="true" selected="@(log.User.DoorAccess ? "selected" : null)">Giriş İzni Var</option>
-                                <option value="false" selected="@(!log.User.DoorAccess ? "selected" : null)">Giriş İzni Yok</option>
-                            </select>
-                        </form>
-                    }
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+        <div class="col-md-4">
+            @Html.DropDownList("sortOrder", sortOrderList, new { @class = "form-select" })
+        </div>
 
+        <div class="col-md-3">
+            <label for="startDate" class="form-label">Başlangıç Tarihi</label>
+            <input type="date" id="startDate" name="startDate" class="form-control" value="@startDate" />
+        </div>
+
+        <div class="col-md-3">
+            <label for="endDate" class="form-label">Bitiş Tarihi</label>
+            <input type="date" id="endDate" name="endDate" class="form-control" value="@endDate" />
+        </div>
+
+        <div class="col-md-3">
+            <label for="errorStatus" class="form-label">Hata Durumu</label>
+            @Html.DropDownList("errorStatus", errorStatusList, new { @class = "form-select" })
+        </div>
+
+        <div class="col-md-3 align-self-end">
+            <button type="submit" class="btn btn-primary w-100">Filtrele</button>
+        </div>
+    </form>
+
+    <div style="max-height: 500px; overflow-y: auto;">
+        <table class="table table-bordered table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>Kullanıcı</th>
+                    <th>Kapı</th>
+                    <th>Tarih</th>
+                    <th>Giriş/Çıkış</th>
+                    <th>Hata</th>
+                    <th>Yetkili mi?</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var log in Model)
+                {
+                    <tr>
+                        <td>@log.UserFullName</td>
+                        <td>@log.DoorName</td>
+                        <td>@log.Timestamp.ToString("g")</td>
+                        <td>@(log.IsEntry ? "Giriş" : "Çıkış")</td>
+                        <td>@(log.ErrorStatus ? "Evet" : "Hayır")</td>
+                        <td>
+                            @if (log.HasAccess)
+                            {
+                                <span class="text-success fw-bold">Evet</span>
+                            }
+                            else
+                            {
+                                <span class="text-danger fw-bold">Hayır</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

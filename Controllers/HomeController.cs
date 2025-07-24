@@ -1,11 +1,15 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SmartDoors.Data;
+using SmartDoors.Filters;
+using SmartDoors.ViewModels;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace SmartDoors.Controllers
 {
+    [SessionAuthorize]
     public class HomeController : Controller
     {
         private readonly SmartDoorContext _context;
@@ -15,42 +19,116 @@ namespace SmartDoors.Controllers
             _context = context;
         }
 
-        public async Task<IActionResult> Index(string sortOrder, string searchString)
+        public IActionResult Privacy()
         {
-            var logs = _context.Logs.Include(l => l.User).AsQueryable();
+            return View();
+        }
 
+        // İstek: tarih aralığı ve hata filtresi eklendi
+        public async Task<IActionResult> Index(
+            string sortOrder = "date_desc",
+            string searchString = "",
+            int? doorId = null,
+            string startDate = null,
+            string endDate = null,
+            string errorStatus = null)
+        {
+            var logsQuery = _context.Logs
+                .Include(l => l.User)
+                    .ThenInclude(u => u.UserDoors)
+                .Include(l => l.Door)
+                .AsQueryable();
+
+            // İsim veya soyisim filtrelemesi
             if (!string.IsNullOrEmpty(searchString))
             {
-                logs = logs.Where(l =>
-                    l.User.FirstName.Contains(searchString) ||
-                    l.User.LastName.Contains(searchString));
+                logsQuery = logsQuery.Where(l =>
+                    l.User.FirstName.Contains(searchString) || l.User.LastName.Contains(searchString));
             }
 
-            logs = sortOrder switch
+            // Kapı filtresi
+            if (doorId.HasValue)
             {
-                "date_desc" => logs.OrderByDescending(l => l.Timestamp),
-                "date_asc" => logs.OrderBy(l => l.Timestamp),
-                "error" => logs.Where(l => l.ErrorStatus),
-                _ => logs.OrderByDescending(l => l.Timestamp)
+                logsQuery = logsQuery.Where(l => l.DoorID == doorId.Value);
+            }
+
+            // Tarih aralığı filtrelemesi
+            if (DateTime.TryParse(startDate, out DateTime start))
+            {
+                logsQuery = logsQuery.Where(l => l.Timestamp >= start);
+            }
+
+            if (DateTime.TryParse(endDate, out DateTime end))
+            {
+                logsQuery = logsQuery.Where(l => l.Timestamp < end.AddDays(1)); // bitiş tarihini dahil etmek için
+            }
+
+            // Hata durumu filtrelemesi
+            if (!string.IsNullOrEmpty(errorStatus))
+            {
+                if (bool.TryParse(errorStatus, out bool errorBool))
+                {
+                    logsQuery = logsQuery.Where(l => l.ErrorStatus == errorBool);
+                }
+            }
+
+            // Sıralama
+            logsQuery = sortOrder switch
+            {
+                "date_asc" => logsQuery.OrderBy(l => l.Timestamp),
+                "date_desc" => logsQuery.OrderByDescending(l => l.Timestamp),
+                _ => logsQuery.OrderByDescending(l => l.Timestamp),
             };
 
-            // 👇 ViewBag ekle
+            var logs = await logsQuery.ToListAsync();
+
+            var logViewModels = logs.Select(l => new LogViewModel
+            {
+                LogID = l.LogID,
+                UserFullName = $"{l.User.FirstName} {l.User.LastName}",
+                DoorName = l.Door.DoorName,
+                Timestamp = l.Timestamp,
+                ErrorStatus = l.ErrorStatus,
+                IsEntry = l.Operation,
+                HasAccess = l.User.UserDoors.Any(ud => ud.DoorID == l.DoorID && ud.AccessGranted)
+            }).ToList();
+
+            ViewBag.Doors = await _context.Doors.ToListAsync();
+            ViewBag.SelectedDoorId = doorId?.ToString() ?? "";
             ViewBag.SearchString = searchString;
             ViewBag.SortOrder = sortOrder;
+            ViewBag.StartDate = startDate ?? "";
+            ViewBag.EndDate = endDate ?? "";
+            ViewBag.ErrorStatus = errorStatus ?? "";
 
-            return View(await logs.ToListAsync());
+            return View(logViewModels);
         }
 
         [HttpPost]
-        public async Task<IActionResult> UpdateUserAccess(int userId, bool doorAccess)
+        public async Task<IActionResult> UpdateUserAccess(int userId, int doorId, bool accessGranted)
         {
-            var user = await _context.Users.FindAsync(userId);
-            if (user == null) return NotFound();
+            var userDoor = await _context.UserDoors
+                .FirstOrDefaultAsync(ud => ud.UserID == userId && ud.DoorID == doorId);
 
-            user.DoorAccess = doorAccess;
+            if (userDoor == null)
+            {
+                userDoor = new Models.UserDoor
+                {
+                    UserID = userId,
+                    DoorID = doorId,
+                    AccessGranted = accessGranted
+                };
+                _context.UserDoors.Add(userDoor);
+            }
+            else
+            {
+                userDoor.AccessGranted = accessGranted;
+                _context.UserDoors.Update(userDoor);
+            }
+
             await _context.SaveChangesAsync();
 
-            return RedirectToAction("Index");
+            return RedirectToAction(nameof(Index));
         }
     }
 }
